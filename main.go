@@ -28,7 +28,13 @@ func processImage(filePath string, outputPath string, quality int) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			log.Printf("Failed to close file: %v\n", err)
+		}
+	}()
 
 	img, _, err := image.Decode(file)
 	if err != nil {
@@ -45,7 +51,10 @@ func processImage(filePath string, outputPath string, quality int) error {
 	if err != nil {
 		return fmt.Errorf("Failed to create file: %v\n", err)
 	}
-	defer out.Close()
+
+	defer func() {
+		_ = out.Close()
+	}()
 
 	err = jpeg.Encode(out, img, &jpeg.Options{Quality: quality})
 	if err != nil {
