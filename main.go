@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -22,7 +23,7 @@ func getDownloadPath() string {
 	return folderPath
 }
 
-func processImage(filePath string, outputPath string) error {
+func processImage(filePath string, outputPath string, quality int) error {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -46,7 +47,7 @@ func processImage(filePath string, outputPath string) error {
 	}
 	defer out.Close()
 
-	err = jpeg.Encode(out, img, &jpeg.Options{Quality: 90})
+	err = jpeg.Encode(out, img, &jpeg.Options{Quality: quality})
 	if err != nil {
 		return fmt.Errorf("Failed to encode image: %v\n", err)
 	}
@@ -55,8 +56,20 @@ func processImage(filePath string, outputPath string) error {
 }
 
 func main() {
-	targetFolder := getDownloadPath()
-	fmt.Println("Target folder:", targetFolder)
+	var inputDir string
+	var outputDir string
+	var quality int
+
+	defaultInput := getDownloadPath()
+	defaultOutput := filepath.Join(defaultInput, "output")
+
+	flag.StringVar(&inputDir, "input", defaultInput, "Input directory")
+	flag.StringVar(&outputDir, "output", defaultOutput, "Output directory")
+	flag.IntVar(&quality, "q", 90, "Output image quality (1-100)")
+
+	flag.Parse()
+
+	fmt.Println("Target folder:", inputDir)
 
 	validExts := map[string]bool{
 		".png":  true,
@@ -64,7 +77,7 @@ func main() {
 		".jpeg": true,
 	}
 
-	entries, err := os.ReadDir(targetFolder)
+	entries, err := os.ReadDir(inputDir)
 	if err != nil {
 		log.Fatalf("Failed to read directory: %v\n", err)
 	}
@@ -81,21 +94,21 @@ func main() {
 		ext := strings.ToLower(filepath.Ext(filename))
 
 		if validExts[ext] {
-			fullPath := filepath.Join(targetFolder, filename)
+			fullPath := filepath.Join(inputDir, filename)
 			imagePaths = append(imagePaths, fullPath)
 		}
 	}
 
 	fmt.Printf("Total images: %d\n", len(imagePaths))
 
-	outputPath := filepath.Join(targetFolder, "output")
+	outputPath := filepath.Join(inputDir, "output")
 	err = os.MkdirAll(outputPath, 0755)
 	if err != nil {
 		log.Fatalf("Failed to create output directory: %v\n", err)
 	}
 
 	for _, imgPath := range imagePaths {
-		err := processImage(imgPath, outputPath)
+		err := processImage(imgPath, outputPath, quality)
 		if err != nil {
 			log.Printf("Failed to process %s: %v\n", imgPath, err)
 			continue
