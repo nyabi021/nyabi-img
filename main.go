@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -111,21 +112,36 @@ func main() {
 
 	fmt.Printf("Total images: %d\n", len(imagePaths))
 
+	err = os.MkdirAll(outputDir, 0755)
+	if err != nil {
+		log.Fatalf("Failed to create output directory: %v\n", err)
+	}
+
+	numWorkers := runtime.NumCPU()
+	jobs := make(chan string, len(imagePaths))
+
 	var wg sync.WaitGroup
 
-	for _, imgPath := range imagePaths {
+	for w := 1; w <= numWorkers; w++ {
 		wg.Add(1)
-		go func(path string) {
+		go func(workerID int) {
 			defer wg.Done()
-
-			err := processImage(path, outputDir, quality)
-			if err != nil {
-				log.Printf("Failed to process %s: %v\n", path, err)
-				return
+			for imgPath := range jobs {
+				err := processImage(imgPath, outputDir, quality)
+				if err != nil {
+					log.Printf("Failed to process %s: %v\n", imgPath, err)
+					continue
+				}
+				fmt.Printf("[Worker %d] Successfully processed %s\n", workerID, filepath.Base(imgPath))
 			}
-			fmt.Printf("Successfully processed %s\n", filepath.Base(path))
-		}(imgPath)
+		}(w)
 	}
+
+	for _, path := range imagePaths {
+		jobs <- path
+	}
+
+	close(jobs)
 
 	wg.Wait()
 
