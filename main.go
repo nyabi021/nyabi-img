@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 func getDownloadPath() string {
@@ -110,19 +111,23 @@ func main() {
 
 	fmt.Printf("Total images: %d\n", len(imagePaths))
 
-	err = os.MkdirAll(outputDir, 0755)
-	if err != nil {
-		log.Fatalf("Failed to create output directory: %v\n", err)
-	}
+	var wg sync.WaitGroup
 
 	for _, imgPath := range imagePaths {
-		err := processImage(imgPath, outputDir, quality)
-		if err != nil {
-			log.Printf("Failed to process %s: %v\n", imgPath, err)
-			continue
-		}
-		fmt.Printf("Successfully processed %s\n", filepath.Base(imgPath))
+		wg.Add(1)
+		go func(path string) {
+			defer wg.Done()
+
+			err := processImage(path, outputDir, quality)
+			if err != nil {
+				log.Printf("Failed to process %s: %v\n", path, err)
+				return
+			}
+			fmt.Printf("Successfully processed %s\n", filepath.Base(path))
+		}(imgPath)
 	}
+
+	wg.Wait()
 
 	fmt.Println("Done")
 }
