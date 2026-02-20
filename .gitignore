@@ -33,3 +33,7 @@ Icon
 .vscode/
 *.swp
 *.swo
+
+# Project specific binary
+nyabi-img
+main
