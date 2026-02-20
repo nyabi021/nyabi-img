@@ -110,14 +110,13 @@ func main() {
 
 	fmt.Printf("Total images: %d\n", len(imagePaths))
 
-	outputPath := filepath.Join(inputDir, "output")
-	err = os.MkdirAll(outputPath, 0755)
+	err = os.MkdirAll(outputDir, 0755)
 	if err != nil {
 		log.Fatalf("Failed to create output directory: %v\n", err)
 	}
 
 	for _, imgPath := range imagePaths {
-		err := processImage(imgPath, outputPath, quality)
+		err := processImage(imgPath, outputDir, quality)
 		if err != nil {
 			log.Printf("Failed to process %s: %v\n", imgPath, err)
 			continue
